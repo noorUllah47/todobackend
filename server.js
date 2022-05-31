@@ -1,21 +1,63 @@
 const express = require('express');
+const app = express();
 const bodyParser= require("body-parser")
-const app=express();
-const { MongoClient } = require('mongodb');
-app.listen(8000,function(){
-    console.log("app is listining on 8000")
+// const cors = require('cors');
+const mongoose = require('mongoose');
+let Todo = require('./todo.model');
+const PORT = 4000;
+// app.use(cors());
+app.use(bodyParser.json());
+mongoose.connect('mongodb://127.0.0.1:27017/todos', { useNewUrlParser: true });
+const connection = mongoose.connection;
+connection.once('open', function() {
+    console.log("MongoDB database connection established successfully");
 })
-const connectionString = "mongodb+srv://noor:noor%40123456@cluster0.pcmsa.mongodb.net/?retryWrites=true&w=majority";
-MongoClient.connect(connectionString, (err, client) => {
-    if (err) return console.error("error",err)
-    console.log('Connected to Database')
-  })
-app.use(bodyParser.urlencoded({extended:true}))
+// Port
+app.listen(PORT, function() {
+    console.log("Server is running on Port: " + PORT);
+}); 
 
-app.post('/quotes', (req, res) => {
-    quotesCollection.insertOne(req.body)
-      .then(result => {
-        console.log(result)
-      })
-      .catch(error => console.error(error))
-  })
+const todoRoutes = express.Router();
+
+// get todo
+app.use('/todos', todoRoutes);
+todoRoutes.route('/').get(function(req, res) {
+    Todo.find(function(err, todos) {
+        if (err) {
+            console.log(err);
+        } else {
+            res.json(todos)
+        }
+    });
+});
+// add Todo
+todoRoutes.route('/add').post(function(req, res) {
+    let todo = new Todo(req.body);
+    todo.save()
+        .then(todo => {
+            res.status(200).json({'todo': 'todo added successfully'});
+        })
+        .catch(err => {
+            res.status(400).send('adding new todo failed');
+        });
+});
+
+
+// Update data
+todoRoutes.route('/update/:id').post(function(req, res) {
+    Todo.findById(req.params.id, function(err, todo) {
+        if (!todo)
+            res.status(404).send("data is not found");
+        else
+            todo.todo_description = req.body.todo_description;
+            todo.todo_responsible = req.body.todo_responsible;
+            todo.todo_priority = req.body.todo_priority;
+            todo.todo_completed = req.body.todo_completed;
+            todo.save().then(todo => {
+                res.json('Todo updated!');
+            })
+            .catch(err => {
+                res.status(400).send("Update not possible");
+            });
+    });
+});
