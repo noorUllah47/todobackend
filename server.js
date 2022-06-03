@@ -1,9 +1,13 @@
 const express = require('express');
 const app = express();
+const bcrypt=require("bcryptjs")
+const jwt = require("jsonwebtoken");
 const bodyParser= require("body-parser")
 // const cors = require('cors');
 const mongoose = require('mongoose');
-let Todo = require('./todo.model');
+let Todo = require('./model/todo.model');
+const User = require("./model/user");
+
 const PORT = 4000;
 // app.use(cors());
 app.use(bodyParser.json());
@@ -61,3 +65,64 @@ todoRoutes.route('/update/:id').post(function(req, res) {
             });
     });
 });
+todoRoutes.route('/get/:id').get(function(req,res){
+    Todo.findById(req.params.id,function(err,todo){
+        if(!todo){
+            res.status(404).send("data not found");
+        }
+        else{
+            res.json(todo)
+        }
+    })
+})
+app.post("/signin",async(req,res) =>{
+    console.log("=========>user",req.body)
+    try{
+const {first_name,last_name,email,password}=req.body;
+if(!(first_name&&last_name&&password&&email)){
+    res.status(400).send("all input is required")
+}
+const oldUser = await User.findOne({ email });
+if (oldUser) {
+    return res.status(409).send("User Already Exist. Please Login");
+  }
+  encryptedPassword =await bcrypt.hash(password,10)
+  
+  const user =await User.create({
+
+      first_name,
+      last_name,
+      password:encryptedPassword,
+      
+      email:email.toLowerCase()
+  })
+  const token = jwt.sign(
+    { user_id: user._id, email },
+    process.env.TOKEN_KEY,
+    {
+      expiresIn: "2h",
+    }
+  );
+  // save user token
+  user.token = token;
+
+  // return new user
+  res.status(201).json(user);
+} catch (err) {
+    console.log(err);
+  }
+})
+app.post("/signup",(req,res)=>{
+
+})
+
+app.get('/getuser',function(req,res){
+    Todo.findById(req.params.id,function(err,User){
+        if(!User){
+            res.status(404).send("data not found");
+        }
+        else{
+            res.json(User)
+        }
+    })
+})
