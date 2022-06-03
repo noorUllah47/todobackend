@@ -117,12 +117,12 @@ app.post("/signup",(req,res)=>{
 })
 
 app.get('/getuser',function(req,res){
-    Todo.findById(req.params.id,function(err,User){
-        if(!User){
+    User.find(req.params,function(err,user){
+        if(!user){
             res.status(404).send("data not found");
         }
         else{
-            res.json(User)
+            res.json(user)
         }
     })
 })
